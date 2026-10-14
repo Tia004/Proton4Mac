@@ -44,6 +44,7 @@ PROTON4MAC_PREFIX=my-game ./proton run '/path/to/game.exe'
 
 Game arguments follow the executable. The launcher starts in the executable's
 directory, preserving arguments as separate values rather than shell commands.
+The game receives a minimal host environment rather than terminal/agent API credentials.
 
 For a native app, build with Xcode/Command Line Tools:
 

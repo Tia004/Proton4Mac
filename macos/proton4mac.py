@@ -54,15 +54,12 @@ def prefix_lock(prefix, wait=False):
 
 
 def environment(prefix):
-    env = os.environ.copy()
-    # Keep Linux Proton settings and another Wine prefix out of this runtime.
-    for key in list(env):
-        if key.startswith(("PROTON_", "STEAM_COMPAT_", "DXVK_", "VKD3D_")) or key in (
-            "WINEPREFIX", "WINEARCH", "WINEDLLOVERRIDES", "WINEESYNC", "WINEFSYNC",
-            "LD_LIBRARY_PATH", "WINEDLLPATH", "WINELOADER", "WINESERVER",
-            "WINE_D3D_CONFIG",
-        ):
-            env.pop(key)
+    # Games do not need credentials belonging to the terminal/agent session.
+    # Keep only the host environment required by this supported launch path.
+    allowed = {"PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TMP", "TEMP",
+               "LANG", "LANGUAGE", "TZ", "DISPLAY", "XAUTHORITY", "SteamAppId", "SteamGameId"}
+    env = {key: value for key, value in os.environ.items()
+           if key in allowed or key.startswith("LC_") or key == "MVK_CONFIG_LOG_LEVEL"}
     env.update(WINEPREFIX=str(prefix), WINEARCH="win64", WINEDEBUG="-all")
     # Only Wine's built-in renderer has been smoke-tested by this project.
     env["WINEDLLOVERRIDES"] = "d3d8,d3d9,d3d10,d3d10_1,d3d10core,d3d11,dxgi=b"

@@ -48,10 +48,11 @@ class LauncherTests(unittest.TestCase):
     def test_environment_cannot_inherit_another_prefix_or_linux_runtime(self):
         with patch.dict(os.environ, {"WINEPREFIX": "/other", "WINEFSYNC": "1",
                                      "PROTON_LOG": "1", "LD_LIBRARY_PATH": "/linux",
-                                     "DXVK_CONFIG_FILE": "/other.conf", "WINELOADER": "/linux/wine"}):
+                                     "DXVK_CONFIG_FILE": "/other.conf", "WINELOADER": "/linux/wine",
+                                     "EXAMPLE_API_KEY": "test-only", "GH_TOKEN": "test-only"}):
             env = launcher.environment(self.root)
         self.assertEqual(env["WINEPREFIX"], str(self.root))
-        for key in ("WINEFSYNC", "PROTON_LOG", "LD_LIBRARY_PATH", "DXVK_CONFIG_FILE", "WINELOADER"):
+        for key in ("WINEFSYNC", "PROTON_LOG", "LD_LIBRARY_PATH", "DXVK_CONFIG_FILE", "WINELOADER", "EXAMPLE_API_KEY", "GH_TOKEN"):
             self.assertNotIn(key, env)
 
     def test_pe_validation(self):
