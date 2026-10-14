@@ -2,6 +2,15 @@
 
 #script to launch Wine with the correct environment
 
+# macOS uses a separate experimental launcher and an external Darwin Wine.
+# Keep Linux Proton's runtime and prefix migrations on the original path.
+import sys
+if sys.platform == "darwin":
+    import os
+    from pathlib import Path
+    entry = Path(__file__).resolve().parent / "macos" / "proton_entry.py"
+    os.execv(sys.executable, [sys.executable, str(entry), *sys.argv[1:]])
+
 import fcntl
 import array
 import fnmatch

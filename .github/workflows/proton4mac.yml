@@ -1,0 +1,20 @@
+name: Proton4Mac launcher
+on:
+  push:
+    branches: [proton4mac]
+    paths: ['macos/**', 'proton', '.github/workflows/proton4mac.yml']
+  pull_request:
+    paths: ['macos/**', 'proton', '.github/workflows/proton4mac.yml']
+permissions:
+  contents: read
+jobs:
+  launcher:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s macos/tests -v
+      - run: python3 macos/build_app.py
+      # Runtime and game checks require a separately installed Wine and hardware.

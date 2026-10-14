@@ -1,0 +1,38 @@
+{
+  "captured_at_utc": "2026-10-14T22:59:39.008193+00:00",
+  "doctor": {
+    "version": "0.1.0",
+    "system": "Darwin",
+    "architecture": "arm64",
+    "macos": "27.0",
+    "renderer": "Wine built-in (wined3d; runtime default)",
+    "steam_native_integration": false,
+    "dxvk_validated": false,
+    "d3d12_validated": false,
+    "wine": "/Applications/Wine Stable.app/Contents/Resources/wine/bin/wine",
+    "wine_version": "wine-10.0",
+    "ready": true,
+    "rosetta_available": true
+  },
+  "tests": [
+    {
+      "test": "windows_cmd",
+      "passed": true,
+      "exit_code": 0,
+      "failure_log_tail": null
+    },
+    {
+      "test": "win32_opengl",
+      "passed": true,
+      "exit_code": 0,
+      "failure_log_tail": null
+    },
+    {
+      "test": "win32_d3d9",
+      "passed": true,
+      "exit_code": 0,
+      "failure_log_tail": null
+    }
+  ],
+  "scope": "Synthetic API probes only. No gameplay, FPS, D3D11/D3D12 or base M1 validation."
+}
