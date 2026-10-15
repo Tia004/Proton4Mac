@@ -124,7 +124,8 @@ final class BrowserController: RetinaWindowController, WKNavigationDelegate, WKU
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { message.stringValue = error.localizedDescription }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         let scheme = navigationAction.request.url?.scheme?.lowercased() ?? ""
-        guard ["http", "https", "about"].contains(scheme) else { message.stringValue = "Questo collegamento richiede un’app esterna e non viene aperto sul Samsung."; decisionHandler(.cancel); return }
+        let generatedDownload = navigationAction.shouldPerformDownload && ["blob", "data"].contains(scheme)
+        guard ["http", "https", "about"].contains(scheme) || generatedDownload else { message.stringValue = "Questo tipo di collegamento non è supportato nel browser interno."; decisionHandler(.cancel); return }
         decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
     }
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) { decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download) }
