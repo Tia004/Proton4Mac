@@ -49,10 +49,11 @@ class LauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {"WINEPREFIX": "/other", "WINEFSYNC": "1",
                                      "PROTON_LOG": "1", "LD_LIBRARY_PATH": "/linux",
                                      "DXVK_CONFIG_FILE": "/other.conf", "WINELOADER": "/linux/wine",
+                                     "DYLD_INSERT_LIBRARIES": "/unrelated.dylib",
                                      "EXAMPLE_API_KEY": "test-only", "GH_TOKEN": "test-only"}):
             env = launcher.environment(self.root)
         self.assertEqual(env["WINEPREFIX"], str(self.root))
-        for key in ("WINEFSYNC", "PROTON_LOG", "LD_LIBRARY_PATH", "DXVK_CONFIG_FILE", "WINELOADER", "EXAMPLE_API_KEY", "GH_TOKEN"):
+        for key in ("WINEFSYNC", "PROTON_LOG", "LD_LIBRARY_PATH", "DXVK_CONFIG_FILE", "WINELOADER", "DYLD_INSERT_LIBRARIES", "EXAMPLE_API_KEY", "GH_TOKEN"):
             self.assertNotIn(key, env)
 
     def test_pe_validation(self):
@@ -67,6 +68,27 @@ class LauncherTests(unittest.TestCase):
     def test_explicit_missing_runtime_does_not_silently_fall_back(self):
         with self.assertRaises(launcher.LauncherError):
             launcher.runtime(str(self.root / "absent"))
+
+    def test_existing_prefix_retains_runtime_when_default_changes(self):
+        prefix = self.root / "existing"
+        prefix.mkdir()
+        original = self.root / "original-wine"
+        original.write_text("#!/bin/sh\nexit 0\n")
+        original.chmod(0o700)
+        (prefix / ".proton4mac.json").write_text(json.dumps({"wine": str(original), "ready": True}))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(launcher.runtime_for_prefix(None, prefix), original)
+            original.unlink()
+            with self.assertRaises(launcher.LauncherError):
+                launcher.runtime_for_prefix(None, prefix)
+
+    def test_prefix_runtime_change_requires_new_environment(self):
+        prefix = self.root / "existing"
+        prefix.mkdir()
+        (prefix / ".proton4mac.json").write_text(json.dumps({"wine": "/original", "ready": True}))
+        with self.assertRaises(launcher.LauncherError), patch.object(launcher, "execute") as execute:
+            launcher.initialize(Path("/replacement"), prefix)
+        execute.assert_not_called()
 
     def test_unmanaged_prefix_not_modified(self):
         prefix = self.root / "existing"
@@ -83,7 +105,44 @@ class LauncherTests(unittest.TestCase):
         with patch.object(launcher, "execute", return_value=launcher.subprocess.CompletedProcess([], 0, "", "")) as run:
             launcher.initialize(Path("/wine"), prefix)
         run.assert_called_once()
+        self.assertIn("mscoree,mshtml=", run.call_args.kwargs["env"]["WINEDLLOVERRIDES"])
+        self.assertNotIn("mscoree", launcher.environment(prefix)["WINEDLLOVERRIDES"])
         self.assertTrue(json.loads(marker.read_text())["ready"])
+
+    def test_failed_boot_stops_only_its_managed_server(self):
+        wine = self.root / "bin/wine"
+        wine.parent.mkdir()
+        server = wine.with_name("wineserver")
+        server.touch()
+        prefix = self.root / "prefix"
+        with patch.object(launcher, "execute", side_effect=[launcher.LauncherError("timeout"), launcher.subprocess.CompletedProcess([], 0)]) as run:
+            with self.assertRaises(launcher.LauncherError):
+                launcher.initialize(wine, prefix)
+        self.assertEqual(run.call_args_list[-1].args[0], [str(server), "-k"])
+        self.assertEqual(run.call_args_list[-1].kwargs["env"]["WINEPREFIX"], str(prefix))
+        self.assertFalse(json.loads((prefix / ".proton4mac.json").read_text())["ready"])
+
+    def test_runtime_update_reinitializes_before_launching_games(self):
+        wine = self.root / "bin/wine"
+        wine.parent.mkdir()
+        wine.write_text("first build")
+        prefix = self.root / "prefix"
+        with patch.object(launcher, "execute", return_value=launcher.subprocess.CompletedProcess([], 0, "", "")) as run:
+            launcher.initialize(wine, prefix)
+            launcher.initialize(wine, prefix)
+            self.assertEqual(run.call_count, 1)
+            wine.write_text("updated runtime build")
+            launcher.initialize(wine, prefix)
+            self.assertEqual(run.call_count, 2)
+        self.assertTrue(json.loads((prefix / ".proton4mac.json").read_text())["ready"])
+
+    def test_stopping_an_already_closed_managed_session_succeeds(self):
+        prefix = launcher.prefix_path(self.root, "game")
+        prefix.mkdir(parents=True)
+        (prefix / ".proton4mac.json").write_text(json.dumps({"wine": "/wine", "ready": True}))
+        with patch.object(launcher.platform, "system", return_value="Darwin"), patch.object(launcher, "runtime", return_value=Path("/wine")), patch.object(launcher, "execute", return_value=launcher.subprocess.CompletedProcess([], 1, "", "")) as run:
+            self.assertEqual(launcher.main(["--root", str(self.root), "stop", "--prefix", "game"]), 0)
+        self.assertEqual(run.call_args.kwargs["env"]["WINEPREFIX"], str(prefix))
 
     def test_dry_run_preserves_arguments_and_does_not_create_prefix(self):
         exe = self.pe()

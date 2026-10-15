@@ -1,0 +1,101 @@
+diff --git a/dlls/ntdll/unix/fsync.c b/dlls/ntdll/unix/fsync.c
+index 25d41ca..a016d89 100644
+--- a/dlls/ntdll/unix/fsync.c
++++ b/dlls/ntdll/unix/fsync.c
+@@ -141,15 +141,25 @@ static void simulate_sched_quantum(void)
+ static inline int futex_wait_multiple( const struct futex_waitv *futexes,
+         int count, const struct timespec64 *end, clockid_t clock_id )
+ {
++#ifdef __linux__
+    if (end)
+         return syscall( __NR_futex_waitv, futexes, count, 0, end, clock_id );
+    else
+         return syscall( __NR_futex_waitv, futexes, count, 0, NULL, 0 );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
+ }
+ 
+ static inline int futex_wake( int *addr, int val )
+ {
++#ifdef __linux__
+     return syscall( __NR_futex, addr, 1, val, NULL, 0, 0 );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
+ }
+ 
+ struct fsync
+@@ -452,6 +462,10 @@ NTSTATUS fsync_close( HANDLE handle )
+ 
+ void fsync_init( DWORD pid )
+ {
++#ifndef __linux__
++    fsync_enabled = 0;
++    return;
++#else
+     struct stat st;
+ 
+ 
+@@ -483,6 +497,7 @@ void fsync_init( DWORD pid )
+ 
+     current_pid = pid;
+     assert( current_pid );
++#endif
+ }
+ 
+ NTSTATUS fsync_release_semaphore( HANDLE handle, ULONG count, ULONG *prev )
+diff --git a/dlls/ntdll/unix/loader.c b/dlls/ntdll/unix/loader.c
+index f8aa468..20c7f2e 100644
+--- a/dlls/ntdll/unix/loader.c
++++ b/dlls/ntdll/unix/loader.c
+@@ -38,7 +38,9 @@
+ #include <sys/mman.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
+-#include <malloc.h>
++#ifdef HAVE_MALLOC_H
++# include <malloc.h>
++#endif
+ #include <dlfcn.h>
+ #ifdef HAVE_PWD_H
+ # include <pwd.h>
+@@ -2451,7 +2453,9 @@ static void start_main_thread(void)
+     set_thread_teb( teb );
+ #endif
+ 
++#ifdef M_PERTURB
+     mallopt( M_PERTURB, 0xff );
++#endif
+     init_startup_info();
+     *(ULONG_PTR *)&peb->CloudFileFlags = get_image_address();
+     set_load_order_app_name( main_wargv[0] );
+@@ -2460,7 +2464,9 @@ static void start_main_thread(void)
+     load_ntdll();
+     load_wow64_ntdll( main_image_info.Machine );
+     load_apiset_dll();
++#ifdef M_PERTURB
+     mallopt( M_PERTURB, 0 );
++#endif
+     server_init_process_done();
+ }
+ 
+diff --git a/server/fsync.c b/server/fsync.c
+index 7d3ec64..362c406 100644
+--- a/server/fsync.c
++++ b/server/fsync.c
+@@ -310,7 +310,12 @@ int fsync_grab_shm_idx( unsigned int shm_idx )
+ 
+ static inline int futex_wake( int *addr, int val )
+ {
++#ifdef __linux__
+     return syscall( __NR_futex, addr, 1, val, NULL, 0, 0 );
++#else
++    errno = ENOSYS;
++    return -1;
++#endif
+ }
+ 
+ /* shm layout for events or event-like objects. */

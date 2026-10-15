@@ -1,88 +1,125 @@
 # Proton4Mac
 
-Experimental macOS launcher in a fork of Valve's Proton 11.0. Free source code,
-no CrossOver dependency. **This is an initial working launcher, not a complete
-port of Valve's Wine, DXVK, vkd3d-proton or Steam Play to macOS.**
+**I tuoi giochi Windows. Una libreria sul Mac.**
 
-The macOS path uses an independently installed Darwin Wine runtime. On Linux,
-the original Proton launcher still follows its upstream path. The original
-build instructions are in [README.proton.md](README.proton.md).
+Proton4Mac è un fork indipendente di [Valve Proton](https://github.com/ValveSoftware/Proton), con un’app nativa per macOS: scegli un `.exe`, ritrovalo nella libreria e avvialo. Il codice è gratuito e aperto; CrossOver non è una dipendenza.
 
-## What works so far
+> **Versione 0.2 · sperimentale.** Il launcher funziona con un runtime Wine per macOS già installato. Il runtime Valve è stato compilato e ha superato le prime prove; la sua integrazione completa è in sviluppo. Non è ancora un sostituto completo di Proton su Linux e non garantisce la compatibilità di ogni gioco.
 
-- Native macOS app: select a Windows executable and choose an environment name.
-- Separate Wine prefixes; an installer and its game can share the same name.
-- Explicit runtime selection, diagnostics, prefix locking and exit status forwarding.
-- `./proton run game.exe` and `waitforexitandrun` dispatch to the macOS launcher.
-- Real Windows x64 probes: `cmd`, OpenGL pixel readback and Direct3D 9 frame
-  clear/readback/presentation passed on an M1 Max, using free Wine 10.0.
+## Inizia a giocare
 
-Game compatibility and performance must be tested per game. There is no native
-Mac Steam Play registration, bundled macOS build of Valve's Wine, verified
-DXVK/vkd3d stack, DirectX 12 validation, or base M1/A18 Pro performance result.
-Windows x86 files are accepted but only x64 execution has been tested.
+1. Apri **Proton4Mac.app**.
+2. Premi **Aggiungi giochi…** e scegli l’eseguibile Windows del gioco. Puoi selezionarne diversi oppure trascinarli nella finestra.
+3. Seleziona il gioco nella libreria e premi **Avvia gioco**. Al primo avvio viene preparato il suo ambiente Windows: può richiedere fino a due minuti.
 
-## Try it on macOS
+Quando il motore DXMT per Wine 10 è installato, i nuovi giochi lo selezionano automaticamente. Puoi cambiare motore prima del primo avvio.
 
-Requires Python 3 and Wine built for macOS. On Apple Silicon the tested Wine
-runtime also requires Rosetta. Installing prerequisites is a separate step;
-the launcher does not install software automatically.
+L’app ricorda giochi, ambienti e log tra un’apertura e l’altra. **Ferma** chiude la sessione del gioco selezionato; **Mostra log** apre i dettagli direttamente nell’app.
 
-The [Homebrew wine-stable cask](https://github.com/Homebrew/homebrew-cask/blob/master/Casks/w/wine-stable.rb)
-is currently disabled (since 1 September 2026, Gatekeeper check failure).
-This prototype was tested with an existing Wine 10.0 installation. It does not
-provide a verified fresh-runtime installation procedure or bypass macOS checks.
-If you have a compatible Darwin Wine runtime already, point `--wine` to it and
-run the diagnostic before launching anything:
+Mantieni l’intera cartella del gioco: il solo `.exe` spesso non basta. Se scarichi un archivio, estrailo prima. Se i file sono su iCloud, devono essere disponibili localmente.
+
+### Doppio clic dal Finder
+
+Dal menu **Proton4Mac → Associa i file .exe a Proton4Mac**, imposta l’app come gestore degli eseguibili Windows. macOS può chiedere una conferma iniziale. Da quel momento il doppio clic su un `.exe` lo aggiunge alla libreria e ne richiede immediatamente l’avvio; gli eseguibili già presenti non vengono duplicati.
+
+Per le cartelle protette di macOS, come Download e Documenti, l’app può chiedere una volta di scegliere la cartella del gioco. L’autorizzazione viene ricordata. Le conferme di sicurezza del sistema restano sotto il controllo di macOS.
+
+### Installer e giochi installati
+
+Puoi aggiungere anche un installer `.exe`. Dopo l’installazione, seleziona la stessa voce e usa **Cambia file .exe…** per indicare l’eseguibile installato: l’ambiente Windows viene conservato.
+
+**Rimuovi dalla libreria** elimina solo la voce. Conserva i file del gioco, l’ambiente e i salvataggi.
+
+## Le tue sorgenti, in un solo posto
+
+**Sorgenti** contiene collegamenti a Steam, SteamRIP, Xbox / Game Pass, Xbox Cloud Gaming, GOG ed Epic Games. Puoi aggiungere o rimuovere qualsiasi indirizzo web `http` o `https`.
+
+I siti si aprono nel browser interno. I download compatibili con WebKit chiedono dove salvare il file; non vengono eseguiti automaticamente. Archivi, pagine di download, account ed eventuali conferme restano parte del servizio scelto. Non esistono scraping di cataloghi o downloader specifici di SteamRIP.
+
+Un collegamento a un servizio **non equivale a un’integrazione del suo account**. Al momento non vengono sincronizzati acquisti, licenze, salvataggi cloud o librerie remote. L’app Xbox per Windows, Gaming Services e i giochi UWP non diventano compatibili aggiungendo un URL. Anche la riproduzione di Xbox Cloud Gaming nel browser incorporato richiede una verifica specifica; è presente il collegamento, non una certificazione del servizio.
+
+## Un’app sul Retina del MacBook
+
+Il launcher, il browser interno, i pannelli e i log preferiscono il display integrato del MacBook. Il percorso di avvio predefinito carica un controllo locale delle finestre nei processi Wine per mantenerle sul Retina e impedire cambi di modalità o catture degli schermi esterni.
+
+Se il display integrato non è disponibile, l’app non apre una finestra su un monitor esterno. Questa scelta è intenzionale per l’attuale configurazione del progetto. Le finestre di sistema, i componenti esterni e i percorsi grafici non ancora testati non offrono la stessa garanzia. I controlli non modificano le impostazioni globali dei monitor.
+
+## DirectX 11 su Metal
+
+È disponibile un motore opzionale basato su DXMT. Dopo l’[installazione del motore](macos/docs/GRAPHICS.md), scegli **Grafica: DXMT · DirectX 11 su Metal** oppure **Grafica: Valve 11 + Metal · sperimentale** prima del primo avvio del gioco. Gli ambienti già creati conservano il motore originale. La compatibilità varia da gioco a gioco; DirectX 12 resta da portare: i [controlli delle capacità Vulkan](macos/docs/vulkan-capabilities.json) mostrano funzioni richieste ancora mancanti anche con MoltenVK 1.4.2 su questo M1 Max.
+
+## Stato della compatibilità
+
+| Componente | Stato verificato |
+| --- | --- |
+| Libreria locale, selezione `.exe`, ricerca, rimozione e cambio eseguibile | Implementati; test di persistenza e deduplicazione |
+| Associazione `.exe` | Gestore macOS verificato; importazione automatica verificata |
+| Esecuzione dall’app | Prova Windows x64 OpenGL riuscita su M1 Max |
+| Windows `cmd`, OpenGL, Direct3D 9 | Prove sintetiche riuscite con Wine 10.0 |
+| Baking Bad | Schermata iniziale renderizzata; gameplay e prestazioni non certificati |
+| Runtime Valve di Proton 11 | Compilato per Darwin; comando Windows, OpenGL e Direct3D 9 riusciti |
+| Direct3D 11 su Metal | DXMT opzionale: dispositivo FL11.0, clear, readback e present riusciti |
+| DirectX 12, Steam Play macOS, overlay e anti-cheat | Non completati / non validati |
+| M1 base, Mac con 8 GB, A18 Pro | Nessun risultato su questo hardware |
+
+Le prove attuali vengono da **M1 Max, 32 GB RAM, macOS 27.0**. Non sono benchmark del modello M1 base. Gli ambienti separati sono prefissi Wine, non sandbox di sicurezza.
+
+## Requisiti e compilazione dell’app
+
+Servono macOS 12 o successivo per il launcher, Python 3, Xcode o Command Line Tools e un runtime Wine compatibile con macOS. Il runtime x86_64 provato su Apple Silicon richiede Rosetta. I requisiti dei singoli motori grafici possono essere più recenti.
+
+```sh
+git clone --branch proton4mac https://github.com/Tia004/Proton4Mac.git
+cd Proton4Mac
+python3 macos/build_app.py
+```
+
+L’app viene creata in `macos/build/Proton4Mac.app`. Spostala in una posizione stabile, per esempio `~/Applications`, prima di associarla agli `.exe`. La build è firmata localmente: non è una distribuzione notarizzata né un installer del runtime.
+
+Il progetto è stato provato con un’installazione esistente di Wine Stable 10.0. Non fornisce ancora un percorso verificato di installazione da zero del runtime. La [cask wine-stable](https://github.com/Homebrew/homebrew-cask/blob/master/Casks/w/wine-stable.rb) risulta disabilitata dal 1 settembre 2026; non vengono disattivate le protezioni di macOS per aggirarlo.
+
+### Uso dal terminale
 
 ```sh
 python3 macos/proton4mac.py doctor
-python3 macos/proton4mac.py run --prefix my-game '/path/to/game.exe'
-# Equivalent macOS entry through the fork's original launcher:
-PROTON4MAC_PREFIX=my-game ./proton run '/path/to/game.exe'
+python3 macos/proton4mac.py run --prefix mio-gioco '/percorso/Gioco.exe'
+PROTON4MAC_PREFIX=mio-gioco ./proton run '/percorso/Gioco.exe'
 ```
 
-Game arguments follow the executable. The launcher starts in the executable's
-directory, preserving arguments as separate values rather than shell commands.
-The game receives a minimal host environment rather than terminal/agent API credentials.
+Passa `--wine /percorso/wine` **prima** del sottocomando per scegliere un runtime. Ogni ambiente conserva il proprio runtime e non passa silenziosamente a un altro. Gli argomenti del gioco seguono il percorso dell’eseguibile e non vengono interpretati da una shell.
 
-For a native app, build with Xcode/Command Line Tools:
+Il comportamento predefinito vincola le finestre al Retina. Il parametro CLI `--display system` disabilita questo controllo soltanto per l’avvio richiesto.
+
+Dati e log si trovano in `~/Library/Application Support/Proton4Mac/`:
+
+```text
+library.json     giochi e sorgenti
+prefixes/        ambienti Windows separati
+logs/            esiti e dettagli degli avvii
+```
+
+Il launcher limita le variabili di ambiente trasmesse ai giochi, escludendo le credenziali della sessione del terminale. Non importa né modifica ambienti CrossOver esistenti.
+
+## Sviluppo del porting
+
+Le modifiche macOS sono in `macos/`. Il launcher originale mantiene il percorso Linux; le istruzioni upstream sono in [README.proton.md](README.proton.md).
+
+- [Analisi delle sorgenti, architettura e lavoro restante](macos/docs/PORTING.md)
+- [Prove eseguite e limiti dei risultati](macos/docs/VALIDATION.md)
+- [Build sperimentale del runtime Valve e patch Darwin](macos/patches/wine/README.md)
 
 ```sh
 python3 macos/build_app.py
-open macos/build/Proton4Mac.app
-```
-
-The app is compiled for the build machine and signed locally; this is not a
-notarized universal release. It uses Python and Wine installed on the machine.
-Use **Scegli file…**, give the game's environment a name, then **Avvia**.
-Use the same name for the game's installer and installed executable.
-
-Prefixes live in `~/Library/Application Support/Proton4Mac/prefixes/`; app logs
-live in the adjacent `logs/` directory. These are separate Wine environments,
-not security sandboxes. No existing Wine/CrossOver prefix is imported or migrated.
-An explicit `STEAM_COMPAT_DATA_PATH` uses a separate `proton4mac/` subdirectory;
-this CLI convention does not establish native Steam integration.
-
-Select a different runtime with `--wine /path/to/wine` before the subcommand,
-or `PROTON4MAC_WINE`. A prefix cannot silently switch to another runtime path.
-The first initialization can take up to two minutes.
-
-## Development and evidence
-
-```sh
 python3 -m unittest discover -s macos/tests -v
-python3 macos/tests/build_probe.py  # requires clang and LLVM's Windows linker
+macos/build/library-tests
+python3 macos/tests/build_probe.py
 python3 macos/tests/run_probes.py
 ```
 
-See [the source audit](macos/docs/PORTING.md) and [validation report](macos/docs/VALIDATION.md).
-The macOS app and local logs are excluded from Git; CI builds the app and tests
-the launcher without pretending that synthetic tests certify game compatibility.
+La CI compila l’app e verifica la logica del launcher e della libreria. I test grafici reali richiedono Wine e hardware locale. Nessun file commerciale dei giochi viene incluso nel repository.
 
-## Licensing
+## Licenze e crediti
 
-New macOS code uses [BSD-3-Clause](macos/LICENSE). Upstream Proton and each
-submodule retain their own licenses and notices. Wine and any graphics runtime
-must be obtained and redistributed under their respective licenses. This fork
-is independent and is not endorsed by Valve, Apple or CodeWeavers.
+Il nuovo codice macOS usa [BSD-3-Clause](macos/LICENSE). Proton, Wine e ogni sottoprogetto conservano le proprie licenze; le patch al codice Wine sono modifiche a Wine e seguono la sua LGPL. Dipendenze e relativi obblighi di redistribuzione vanno verificati prima di pubblicare un runtime completo.
+
+Il progetto si basa sul lavoro di Valve, Wine, CodeWeavers, Khronos e degli altri autori upstream. L’open source consente anche servizi e distribuzioni commerciali: Proton4Mac sceglie un’interfaccia e un percorso di sviluppo gratuiti. È un progetto indipendente, non approvato da Valve, Apple o CodeWeavers.

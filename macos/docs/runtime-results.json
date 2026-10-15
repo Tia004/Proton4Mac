@@ -1,0 +1,81 @@
+{
+  "captured_at_utc": "2026-10-15T09:10:36.609638+00:00",
+  "hardware": {
+    "chip": "Apple M1 Max",
+    "ram_gb": 32,
+    "macos": "27.0 (26A428)"
+  },
+  "logic_checks": {
+    "python_launcher": 16,
+    "swift_library": 15,
+    "passed": true
+  },
+  "display_guard": {
+    "arm64_hidden_window_checks": 4,
+    "x86_64_hidden_window_checks": 4,
+    "observed_runtime_display": "Built-in Retina Display (1)"
+  },
+  "valve_wine": {
+    "revision": "e60892cc2398b0a83c332a2078c7b85e47bdb42b",
+    "reported_version": "wine-11.0",
+    "full_build_and_install": true,
+    "cmd": {
+      "exit_code": 0,
+      "stdout": "PROTON4MAC_OK",
+      "stderr": ""
+    },
+    "graphics": [
+      {
+        "test": "opengl",
+        "exit_code": 0
+      },
+      {
+        "test": "d3d9",
+        "exit_code": 0
+      }
+    ],
+    "patches": {
+      "0001-guard-linux-amd-drm.patch": "528b57c596e9767d6f9b1bb4c2d843376c43008e91e45255e57330bf27766ac1",
+      "0002-darwin-loader-and-futex.patch": "2c7eebfb5f8b30c654e179bafaa1de2423400da77f1299f43a7f32e06663d583",
+      "0003-darwin-sync-and-thread-setup.patch": "ae5452fcfbe9e8ce5a17e7f3d8f8c511345404220d1293989741a071626ea8a8",
+      "0004-opengl-without-egl.patch": "5252faee87c404df01ba2997f87d2dbedcab0710f27dae50300ba2efaddf5edf",
+      "0005-media-converter-pthread-header.patch": "a848e8ac33ed5dd97ad80d38c46cb15fec26d764e81b29809215aa114e6a3b01",
+      "0006-darwin-loader64-resources.patch": "b9dcd700984f47eb9338f1e27a2e1b1cc8aa83f744d81e8fd99b4488e9ef2593",
+      "0007-darwin-relative-soname.patch": "69a2e29e890b0cbdddb54501f7dc9a83f8843a69897572a43e2204b452f18996",
+      "0008-dxmt-window-abi.patch": "f1a4ff92688ce07057f4dff5ba22bdab63a05d307c4c8310d6793c057dc4096f"
+    }
+  },
+  "d3d11_dxmt": {
+    "version": "0.80",
+    "bases_tested": [
+      "Wine 10.0",
+      "patched Valve Wine 11.0"
+    ],
+    "hardware_feature_level": "11.0",
+    "hlsl_targets": [
+      "vs_5_0",
+      "ps_5_0"
+    ],
+    "draw": "fullscreen triangle",
+    "staging_pixel_rgba_hex": "407fbfff",
+    "present": true,
+    "exit_code": 0
+  },
+  "desktop_checks": {
+    "exe_default_handler": "org.proton4mac.launcher",
+    "document_import": true,
+    "wine10_dxmt_library_launch": true,
+    "folder_grant_saved_and_reused": true,
+    "custom_web_source_add_remove": true,
+    "internal_attachment_download_contents_verified": true,
+    "latest_valve11_gui_option": "compiled; engine tested via CLI; final visual check blocked by screen lock"
+  },
+  "remaining": {
+    "full_steam_integration": false,
+    "d3d12_validated": false,
+    "base_m1_tested": false,
+    "a18_pro_tested": false,
+    "self_contained_runtime_distribution": false
+  },
+  "scope": "Synthetic API and desktop flow checks, not gameplay or performance certification."
+}

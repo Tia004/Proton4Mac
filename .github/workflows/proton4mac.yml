@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python3 -m unittest discover -s macos/tests -v
       - run: python3 macos/build_app.py
+      - run: python3 -m unittest discover -s macos/tests -v
+      - run: macos/build/library-tests
       # Runtime and game checks require a separately installed Wine and hardware.

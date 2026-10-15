@@ -1,0 +1,85 @@
+diff --git a/dlls/ntdll/unix/signal_x86_64.c b/dlls/ntdll/unix/signal_x86_64.c
+index 110404c..a206033 100644
+--- a/dlls/ntdll/unix/signal_x86_64.c
++++ b/dlls/ntdll/unix/signal_x86_64.c
+@@ -2279,7 +2279,7 @@ __ASM_GLOBAL_FUNC( dump_syscall_fault_return,
+                    "movq %rdi,%rsp\n\t"
+                    "movq %rsi,%rax\n\t"
+                    "movq %rdx,%r13\n\t"
+-                   "jmp %rcx")
++                   "jmpq *%rcx")
+ 
+ 
+ static void dump_syscall_fault( CONTEXT *context, DWORD exc_code )
+@@ -3197,7 +3197,11 @@ void signal_init_process(void)
+ 
+ void set_thread_teb( TEB *teb )
+ {
++#ifdef __linux__
+     arch_prctl( ARCH_SET_GS, teb );
++#endif
++    /* Darwin preserves pthread GS here. Its existing syscall/signal entry
++     * and leave handlers switch between the pthread base and Windows TEB. */
+ }
+ 
+ /***********************************************************************
+diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
+index 67ab945..6f2c89c 100644
+--- a/dlls/ntdll/unix/sync.c
++++ b/dlls/ntdll/unix/sync.c
+@@ -61,7 +61,9 @@
+ # include <sys/event.h>
+ #endif
+ 
++#ifdef __linux__
+ # include "ntsync_tmp.h"
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+diff --git a/dlls/ntdll/unix/system.c b/dlls/ntdll/unix/system.c
+index 1821c6e..7ebbdd9 100644
+--- a/dlls/ntdll/unix/system.c
++++ b/dlls/ntdll/unix/system.c
+@@ -765,8 +765,10 @@ void init_shared_data_cpuinfo( KUSER_SHARED_DATA *data )
+ 
+ #endif /* End architecture specific feature detection for CPUs */
+ 
++#ifdef __linux__
+ static void fill_performance_core_info(void);
+ static BOOL sysfs_parse_bitmap(const char *filename, ULONG_PTR *mask);
++#endif
+ 
+ static ULONG popcount( ULONG val )
+ {
+@@ -781,6 +783,7 @@ static ULONG popcount( ULONG val )
+ 
+ void fill_cpu_override(void)
+ {
++#ifdef __linux__
+     const char *env_override = getenv("WINE_CPU_TOPOLOGY");
+     unsigned int host_cpu_count;
+     BOOL smt = FALSE;
+@@ -973,6 +976,7 @@ done:
+ error:
+     cpu_override.mapping.cpu_count = 0;
+     ERR("Invalid WINE_CPU_TOPOLOGY string %s (%s).\n", debugstr_a(env_override), debugstr_a(s));
++#endif
+ }
+ 
+ struct cpu_topology_override *get_cpu_topology_override(void)
+diff --git a/server/inproc_sync.c b/server/inproc_sync.c
+index a7020ef..938111b 100644
+--- a/server/inproc_sync.c
++++ b/server/inproc_sync.c
+@@ -36,7 +36,9 @@
+ 
+ #include "fsync.h"
+ 
+-#include "ntsync_tmp.h"
++#ifdef __linux__
++# include "ntsync_tmp.h"
++#endif
+ 
+ #ifdef NTSYNC_IOC_EVENT_READ
+ 

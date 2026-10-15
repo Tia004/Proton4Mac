@@ -1,0 +1,155 @@
+diff --git a/dlls/win32u/window.c b/dlls/win32u/window.c
+index a7e2d4e..fba84f9 100644
+--- a/dlls/win32u/window.c
++++ b/dlls/win32u/window.c
+@@ -380,6 +380,7 @@ void client_surface_update( struct client_surface *surface )
+     pthread_mutex_unlock( &surfaces_lock );
+ }
+ 
++__attribute__((visibility("default")))
+ void add_window_client_surface( HWND hwnd, struct client_surface *surface )
+ {
+     pthread_mutex_lock( &surfaces_lock );
+diff --git a/dlls/winemac.drv/Makefile.in b/dlls/winemac.drv/Makefile.in
+index 621388f..ad805ef 100644
+--- a/dlls/winemac.drv/Makefile.in
++++ b/dlls/winemac.drv/Makefile.in
+@@ -15,6 +15,7 @@ UNIX_LIBS    = \
+ 	-framework Security \
+ 
+ SOURCES = \
++	proton4mac_dxmt.c \
+ 	clipboard.c \
+ 	cocoa_app.m \
+ 	cocoa_clipboard.m \
+diff --git a/dlls/winemac.drv/proton4mac_dxmt.c b/dlls/winemac.drv/proton4mac_dxmt.c
+new file mode 100644
+index 0000000..66a0287
+--- /dev/null
++++ b/dlls/winemac.drv/proton4mac_dxmt.c
+@@ -0,0 +1,125 @@
++/*
++ * Proton4Mac surface adapter for the pinned DXMT 0.80 Unix library.
++ * Copyright 2026 Proton4Mac contributors
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ */
++#if 0
++#pragma makedep unix
++#endif
++#include "config.h"
++#include <pthread.h>
++#include <stdlib.h>
++#include "macdrv.h"
++
++extern void add_window_client_surface( HWND hwnd, struct client_surface *surface );
++
++/* DXMT 0.80 reads the old four-pointer window prefix. Wine 11 instead has a
++ * lazy client surface and a different window-data layout. The adapter owns a
++ * registered Wine client surface for each DXMT Metal view, so native resize
++ * and window detach notifications retain their normal lifetime semantics. */
++struct dxmt_window_data
++{
++    HWND hwnd;
++    macdrv_window cocoa_window;
++    macdrv_view cocoa_view;
++    macdrv_view client_cocoa_view;
++    struct macdrv_win_data *native;
++    struct macdrv_client_surface *surface;
++    macdrv_metal_view metal_view;
++    struct dxmt_window_data *next;
++};
++static pthread_mutex_t dxmt_lock = PTHREAD_MUTEX_INITIALIZER;
++static struct dxmt_window_data *dxmt_windows;
++
++static void dxmt_remove( struct dxmt_window_data *data )
++{
++    struct dxmt_window_data **entry;
++    pthread_mutex_lock( &dxmt_lock );
++    for (entry = &dxmt_windows; *entry && *entry != data; entry = &(*entry)->next) {}
++    if (*entry) *entry = data->next;
++    pthread_mutex_unlock( &dxmt_lock );
++    if (data->surface) client_surface_release( &data->surface->client );
++    free( data );
++}
++
++static struct dxmt_window_data *dxmt_get_win_data( HWND hwnd )
++{
++    struct dxmt_window_data *data = calloc( 1, sizeof(*data) );
++    if (!data) return NULL;
++    data->hwnd = hwnd;
++    if ((data->surface = macdrv_client_surface_create( hwnd )))
++    {
++        add_window_client_surface( hwnd, &data->surface->client );
++        data->cocoa_view = data->surface->cocoa_view;
++        data->client_cocoa_view = data->surface->cocoa_view;
++    }
++    if ((data->native = get_win_data( hwnd ))) data->cocoa_window = data->native->cocoa_window;
++    pthread_mutex_lock( &dxmt_lock );
++    data->next = dxmt_windows; dxmt_windows = data;
++    pthread_mutex_unlock( &dxmt_lock );
++    return data;
++}
++
++static macdrv_metal_view dxmt_create_view( macdrv_view view, macdrv_metal_device device )
++{
++    struct dxmt_window_data *data;
++    macdrv_metal_view metal;
++    if (!view) return NULL;
++    pthread_mutex_lock( &dxmt_lock );
++    for (data = dxmt_windows; data && data->client_cocoa_view != view; data = data->next) {}
++    pthread_mutex_unlock( &dxmt_lock );
++    /* The caller owns data until release_win_data, after this callback. */
++    if (!data) return NULL;
++    metal = macdrv_view_create_metal_view( view, device );
++    pthread_mutex_lock( &dxmt_lock );
++    data->metal_view = metal;
++    pthread_mutex_unlock( &dxmt_lock );
++    return metal;
++}
++
++static void dxmt_release_win_data( struct dxmt_window_data *data )
++{
++    if (!data) return;
++    if (data->native) release_win_data( data->native );
++    data->native = NULL;
++    if (!data->metal_view) dxmt_remove( data );
++}
++
++static void dxmt_release_view( macdrv_metal_view view )
++{
++    struct dxmt_window_data *data;
++    pthread_mutex_lock( &dxmt_lock );
++    for (data = dxmt_windows; data && data->metal_view != view; data = data->next) {}
++    pthread_mutex_unlock( &dxmt_lock );
++    macdrv_view_release_metal_view( view );
++    if (data) dxmt_remove( data );
++}
++
++/* Exact pointer slots read by winemetal_unix.c at DXMT v0.80. Only five
++ * callbacks are consumed there. Unused legacy slots remain NULL. */
++struct dxmt_macdrv_functions
++{
++    void (*reserved0)(void);
++    struct dxmt_window_data *(*get_win_data)(HWND);
++    void (*release_win_data)(struct dxmt_window_data *);
++    void (*reserved3)(void);
++    void (*reserved4)(void);
++    void (*reserved5)(void);
++    macdrv_metal_view (*create_view)(macdrv_view, macdrv_metal_device);
++    macdrv_metal_layer (*get_layer)(macdrv_metal_view);
++    void (*release_view)(macdrv_metal_view);
++    void (*reserved9)(void);
++};
++__attribute__((visibility("default")))
++const struct dxmt_macdrv_functions macdrv_functions =
++{
++    .get_win_data = dxmt_get_win_data,
++    .release_win_data = dxmt_release_win_data,
++    .create_view = dxmt_create_view,
++    .get_layer = macdrv_view_get_metal_layer,
++    .release_view = dxmt_release_view,
++};

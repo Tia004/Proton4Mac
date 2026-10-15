@@ -1,0 +1,47 @@
+diff --git a/configure.ac b/configure.ac
+index 370857c..0cc7da5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2139,6 +2139,7 @@ fi
+ dnl **** Platform-specific checks ****
+ 
+ AC_SUBST(WINELOADER_PROGRAMS,"wine")
++AC_SUBST(WINE64LOADER_PROGRAMS,"wine64")
+ 
+ case $host_os in
+   linux*)
+@@ -2152,6 +2153,7 @@ esac
+ if test "$wine_use_preloader" = "yes"
+ then
+   WINELOADER_PROGRAMS="$WINELOADER_PROGRAMS wine-preloader"
++  WINE64LOADER_PROGRAMS="$WINE64LOADER_PROGRAMS wine64-preloader"
+   AC_DEFINE(HAVE_WINE_PRELOADER, 1, [Define to 1 if the Wine preloader is being used.])
+ fi
+ 
+diff --git a/loader64/Makefile.in b/loader64/Makefile.in
+index cfbe51d..fc13937 100644
+--- a/loader64/Makefile.in
++++ b/loader64/Makefile.in
+@@ -3,10 +3,11 @@ PARENTSRC = ../loader
+ SOURCES = \
+ 	main.c \
+ 	preloader.c \
+-	preloader_mac.c
++	preloader_mac.c \
++	wine_info.plist.in
+ 
+-PROGRAMS = wine64 wine64-preloader
+-INSTALL_LIB = wine64 wine64-preloader
++PROGRAMS = $(WINE64LOADER_PROGRAMS)
++INSTALL_LIB = $(WINE64LOADER_PROGRAMS)
+ UNIX_CFLAGS = -fPIE
+ 
+ preloader_EXTRADEFS = -fno-builtin
+@@ -15,6 +16,6 @@ wine64_OBJS = main.o
+ wine64_DEPS = $(WINELOADER_DEPENDS)
+ wine64_LDFLAGS = $(WINELOADER_LDFLAGS) $(LDEXECFLAGS) $(PTHREAD_LIBS)
+ 
+-wine64_preloader_OBJS = preloader.o
++wine64_preloader_OBJS = preloader.o preloader_mac.o
+ wine64_preloader_DEPS = $(WINELOADER_DEPENDS)
+ wine64_preloader_LDFLAGS = $(WINEPRELOADER_LDFLAGS)

@@ -1,0 +1,53 @@
+{
+  "captured_at_utc": "2026-10-15T08:49:28.167258+00:00",
+  "device": "Apple M1 Max",
+  "vkd3d_proton_revision": "212991fc2c266bc0d59f4c4ce8f80f7126508d71",
+  "implementation_requirements": {
+    "source": "libs/vkd3d/device.c",
+    "requires_robustBufferAccess2": true,
+    "requires_nullDescriptor": true
+  },
+  "results": {
+    "MoltenVK 1.3.0": [
+      {
+        "device": "Apple M1 Max",
+        "vulkan_version": "1.3.0",
+        "robustness2_extension": true,
+        "push_descriptor_extension": true,
+        "robustBufferAccess2": false,
+        "nullDescriptor": false,
+        "shaderDrawParameters": true,
+        "samplerMirrorClampToEdge": true,
+        "updateAfterBind": {
+          "sampledImages": 1000000,
+          "storageImages": 1000000,
+          "storageBuffers": 1000000,
+          "samplers": 1024
+        },
+        "descriptorBindingPartiallyBound": true,
+        "runtimeDescriptorArray": true
+      }
+    ],
+    "MoltenVK 1.4.2": [
+      {
+        "device": "Apple M1 Max",
+        "vulkan_version": "1.3.357",
+        "robustness2_extension": true,
+        "push_descriptor_extension": true,
+        "robustBufferAccess2": false,
+        "nullDescriptor": false,
+        "shaderDrawParameters": true,
+        "samplerMirrorClampToEdge": true,
+        "updateAfterBind": {
+          "sampledImages": 1000000,
+          "storageImages": 1000000,
+          "storageBuffers": 1000000,
+          "samplers": 1024
+        },
+        "descriptorBindingPartiallyBound": true,
+        "runtimeDescriptorArray": true
+      }
+    ]
+  },
+  "conclusion": "The queried stacks do not meet pinned vkd3d-proton mandatory Robustness2 checks. No D3D12 compatibility claim. No base M1 or A18 Pro measurement."
+}

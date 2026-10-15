@@ -1,0 +1,50 @@
+diff --git a/dlls/amd_ags_x64/unixlib.c b/dlls/amd_ags_x64/unixlib.c
+index d34a162..5be8a3a 100644
+--- a/dlls/amd_ags_x64/unixlib.c
++++ b/dlls/amd_ags_x64/unixlib.c
+@@ -31,9 +31,11 @@
+ #include <fcntl.h>
+ #include <errno.h>
+ 
+-#include <xf86drm.h>
+-#include <amdgpu_drm.h>
+-#include <amdgpu.h>
++#ifdef __linux__
++# include <xf86drm.h>
++# include <amdgpu_drm.h>
++# include <amdgpu.h>
++#endif
+ 
+ #include "ntstatus.h"
+ #define WIN32_NO_STATUS
+@@ -46,6 +48,7 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(amd_ags);
+ 
++#ifdef __linux__
+ #define MAX_DEVICE_COUNT 64
+ 
+ static unsigned int device_count;
+@@ -276,6 +279,22 @@ static NTSTATUS get_device_info( void *args )
+     return STATUS_NOT_FOUND;
+ }
+ 
++#else
++
++/* Linux DRM telemetry is unavailable on Darwin. The PE-side Vulkan adapter
++ * enumeration remains usable; only AMD-specific low-level data is absent. */
++static NTSTATUS init( void *args )
++{
++    return STATUS_NOT_SUPPORTED;
++}
++
++static NTSTATUS get_device_info( void *args )
++{
++    return STATUS_NOT_SUPPORTED;
++}
++
++#endif
++
+ const unixlib_entry_t __wine_unix_call_funcs[] =
+ {
+     init,

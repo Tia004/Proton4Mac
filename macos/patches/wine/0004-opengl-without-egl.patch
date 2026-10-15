@@ -1,0 +1,96 @@
+diff --git a/dlls/win32u/opengl.c b/dlls/win32u/opengl.c
+index 03346f5..ea8da6d 100644
+--- a/dlls/win32u/opengl.c
++++ b/dlls/win32u/opengl.c
+@@ -1610,8 +1610,26 @@ static void init_egl_platforms( struct opengl_funcs *funcs, const struct opengl_
+ {
+ }
+ 
++static BOOL needs_framebuffer_surface( HWND hwnd ) { return FALSE; }
+ #endif /* SONAME_LIBEGL */
+ 
++static BOOL is_framebuffer_surface( struct opengl_drawable *drawable )
++{
++#ifdef SONAME_LIBEGL
++    return drawable->funcs == &framebuffer_surface_funcs;
++#else
++    return FALSE;
++#endif
++}
++
++static struct opengl_drawable *native_drawable( struct opengl_drawable *drawable )
++{
++#ifdef SONAME_LIBEGL
++    if (drawable && is_framebuffer_surface( drawable )) return framebuffer_from_opengl_drawable( drawable )->target;
++#endif
++    return drawable;
++}
++
+ static UINT read_drm_device_prop( const char *name, const char *prop )
+ {
+     UINT value = -1;
+@@ -1964,7 +1982,7 @@ static struct opengl_drawable *get_window_unused_drawable( HWND hwnd, int format
+         opengl_drawable_release( drawable );
+         drawable = NULL;
+     }
+-    if (drawable && (drawable->funcs == &framebuffer_surface_funcs) != raw)
++    if (drawable && (is_framebuffer_surface( drawable )) != raw)
+     {
+         opengl_drawable_release( drawable );
+         drawable = NULL;
+@@ -1981,12 +1999,14 @@ static struct opengl_drawable *get_window_unused_drawable( HWND hwnd, int format
+         if (drawable && drawable->client) add_window_client_surface( hwnd, drawable->client );
+     }
+ 
+-    if (drawable && drawable->funcs != &framebuffer_surface_funcs && raw)
++#ifdef SONAME_LIBEGL
++    if (drawable && !is_framebuffer_surface( drawable ) && raw)
+     {
+         struct opengl_drawable *surface = framebuffer_surface_create( format, drawable->client, drawable );
+         opengl_drawable_release( drawable );
+         drawable = surface;
+     }
++#endif
+ 
+     TRACE( "hwnd %p, drawable %s\n", hwnd, debugstr_opengl_drawable( drawable ) );
+     return drawable;
+@@ -2184,7 +2204,7 @@ static BOOL win32u_wglSetPixelFormatWINE( HDC hdc, int format )
+         opengl_drawable_release( drawable );
+         drawable = NULL;
+     }
+-    if (drawable && (drawable->funcs == &framebuffer_surface_funcs) != needs_framebuffer_surface( hwnd ))
++    if (drawable && (is_framebuffer_surface( drawable )) != needs_framebuffer_surface( hwnd ))
+     {
+         opengl_drawable_release( drawable );
+         drawable = NULL;
+@@ -2244,7 +2264,7 @@ static BOOL context_unset_current( struct wgl_context *context )
+ 
+ static BOOL needs_framebuffer_update( HWND hwnd, struct opengl_drawable *drawable )
+ {
+-    return drawable && (drawable->funcs == &framebuffer_surface_funcs) != needs_framebuffer_surface( hwnd );
++    return drawable && (is_framebuffer_surface( drawable )) != needs_framebuffer_surface( hwnd );
+ }
+ 
+ /* return an updated drawable, recreating one if the window drawables have been invalidated (mostly wineandroid) */
+@@ -2314,8 +2334,8 @@ static BOOL context_sync_drawables( struct wgl_context *context, HDC draw_hdc, H
+         if (old_read != old_draw) opengl_drawable_set_context( old_draw, NULL );
+     }
+ 
+-    if ((draw = new_draw) && new_draw->funcs == &framebuffer_surface_funcs) draw = framebuffer_from_opengl_drawable( new_draw )->target;
+-    if ((read = new_read) && new_read->funcs == &framebuffer_surface_funcs) read = framebuffer_from_opengl_drawable( new_read )->target;
++    draw = native_drawable( new_draw );
++    read = native_drawable( new_read );
+ 
+     if (!ret && (ret = driver_funcs->p_make_current( draw, read, context->driver_private )))
+     {
+@@ -2409,8 +2429,8 @@ static void pop_internal_context( struct wgl_context *context )
+ 
+     TRACE( "context %p\n", context );
+ 
+-    if ((draw = context->draw) && draw->funcs == &framebuffer_surface_funcs) draw = framebuffer_from_opengl_drawable( draw )->target;
+-    if ((read = context->read) && read->funcs == &framebuffer_surface_funcs) read = framebuffer_from_opengl_drawable( read )->target;
++    draw = native_drawable( context->draw );
++    read = native_drawable( context->read );
+ 
+     driver_funcs->p_make_current( draw, read, context->driver_private );
+ }
